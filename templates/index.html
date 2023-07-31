@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lichess Study Viewer</title>
+</head>
+<body>
+    <h1>Lichess Study Viewer</h1>
+    <form id="search-form">
+        <input type="text" id="study-id" placeholder="Enter Lichess Study ID">
+        <button type="submit">Search</button>
+    </form>
+  <form id="selection-form">
+  </form>
+    <div id="python" style="white-space: pre;">
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

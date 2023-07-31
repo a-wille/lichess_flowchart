@@ -1,0 +1,1 @@
+'1. e4 e5  (1... c5 2. Nf3  2... Nc6 (2... d6 3. d4 cxd4 4. Nxd4) (2... e6 3. d4 cxd4 4. Nxd4) 3. d4 cxd4 4. Nxd4) 2. Nf3 Nc6 3. Bb5 Nf6  (3... a6 4. Ba4 b5 5. Bb3 Nf6 6. O-O Bc5 7. Re1 O-O) '
