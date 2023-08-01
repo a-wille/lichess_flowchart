@@ -57,15 +57,23 @@ def create_flowchart():
             response = requests.get(url, headers=headers)
             if response.status_code == 200:
                 data = response.content.decode()
-                x = re.findall(r'\[Event ".*?: (.+?)"\]', data)[0]
-                chapter = re.findall(r'\n\n(.*?)\*', response.content.decode())[0]
-                tree = simple_parse_chapter(chapter, Tree())
-                x = x.replace(' ', '_')
-                tree.to_graphviz("{}.dot".format(x))
+                # find chapter name
+                chapter_name = re.findall(r'\[Event ".*?: (.+?)"\]', data)[0]
 
-                subprocess.call(["dot", "-Tpng", "{}.dot".format(x), "-o", "lichess_flowchart/static/{}.png".format(x)])
-                subprocess.call(["rm", "{}.dot".format(x)])
-                return_data.append(x)
+                # parse down to just move content in ile
+                chapter = re.findall(r'\n\n([\S\s]*?)\*', response.content.decode())[0]
+
+                # parse chapter content
+                tree = simple_parse_chapter(chapter, Tree())
+
+                # remove spaces in file name (to make it easier to load images statically into frontend,
+                # we can't have spaces in the saved image file names)
+                file_name = chapter_name.replace(' ', '_')
+                tree.to_graphviz("{}.dot".format(file_name))
+
+                subprocess.call(["dot", "-Tpng", "{}.dot".format(file_name), "-o", "lichess_flowchart/static/{}.png".format(x)])
+                subprocess.call(["rm", "{}.dot".format(file_name)])
+                return_data.append(file_name)
             else:
                 return jsonify({"error": str("Study not found, may be private or API request failed")}), 404
         except requests.exceptions.RequestException as e:
@@ -73,7 +81,7 @@ def create_flowchart():
     return {'trees': return_data}
 
 def simple_parse_chapter(chapter, tree):
-    moves = re.sub(r'(\{.+?\})', '', chapter)
+    moves = re.sub(r'\{([^}]+)\}', '', chapter)
     move_counter = 1
     color = 'w'
     white_parent = None
@@ -99,17 +107,20 @@ def simple_parse_chapter(chapter, tree):
             moves = moves.replace(paren_content, '', 1).strip()
             subtree = simple_parse_chapter(paren_content[1:-1], Tree())
 
+            # if parent is null (this means the openings are likely black and don't have a single root node,
+            # then create ? node just to keep all the black openings together and set that as the root/parent
             if not parent:
                 if "?" not in tree.nodes:
                     new_tree = Tree()
                     new_tree.create_node("?", "?")
                     new_tree.paste("?", tree)
                     parent = "?"
-                    # new_tree.paste("?", subtree)
                     tree = new_tree
                 else:
                     parent = "?"
 
+            # here we try and bring the subtree into the original tree, and we handle duplicate node errors
+            # (which we don't care about here since there are many duplicate chess moves even in different lines)
             try:
                 tree.paste(parent, subtree)
             except ValueError as e:
@@ -117,6 +128,9 @@ def simple_parse_chapter(chapter, tree):
                 inserted = False
                 for item in e.args[0]:
                     subtree.update_node(item, identifier=item + '.')
+
+                # while loop will just keep trying to bring the trees together by adding periods to the subtree items
+                # since we are done touching those nodes (and their id doesn't matter anymore) until the paste function works
                 while not inserted:
                     try:
                         tree.paste(parent, subtree)
@@ -177,6 +191,7 @@ def simple_parse_chapter(chapter, tree):
 
         # remove first item and then move on
         moves = moves.replace(first_item, '', 1).strip()
+
     return tree
 
 
