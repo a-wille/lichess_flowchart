@@ -2,6 +2,7 @@ import requests
 import re
 from flask import Flask, render_template, request, jsonify
 from treelib import Tree
+import subprocess
 
 app = Flask(__name__)
 
@@ -47,7 +48,7 @@ def get_study_chapters():
 def create_flowchart():
     data = request.get_json()
     headers = {"Authorization": f"Bearer {API_TOKEN}"}
-    joined_data = '\n\n'
+    return_data = []
     for chapter in data['chapters']:
         study_id = chapter.split('_')[0]
         chapter_id = chapter.split('_')[1]
@@ -59,13 +60,16 @@ def create_flowchart():
                 x = re.findall(r'\[Event ".*?: (.+?)"\]', data)[0]
                 chapter = re.findall(r'\n\n(.*?)\*', response.content.decode())[0]
                 tree = simple_parse_chapter(chapter, Tree())
-                joined_data += '________________________{}__________________________\n{}\n\n\n'.format(x, tree)
-
+                x = x.replace(' ', '_')
+                tree.to_graphviz("{}.dot".format(x))
+                subprocess.call(["dot", "-Tpng", "{}.dot".format(x), "-o", "static/{}.png".format(x)])
+                subprocess.call(["rm", "{}.dot".format(x)])
+                return_data.append(x)
             else:
                 return jsonify({"error": str("Study not found, may be private or API request failed")}), 404
         except requests.exceptions.RequestException as e:
             return jsonify({"error": str("Chapter or Study is private, please make sure the study and chapters allow public access and try again.")}), 500
-    return {'tree': joined_data}
+    return {'trees': return_data}
 
 def simple_parse_chapter(chapter, tree):
     moves = re.sub(r'(\{.+?\})', '', chapter)
@@ -178,3 +182,4 @@ def simple_parse_chapter(chapter, tree):
 
 if __name__ == "__main__":
     app.run(debug=True)
+

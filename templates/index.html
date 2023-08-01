@@ -2,14 +2,15 @@
 <html>
 <head>
     <title>Lichess Study Viewer</title>
+    <h1 style="text-align: center; ">Lichess Study Viewer</h1>
 </head>
-<body>
-    <h1>Lichess Study Viewer</h1>
+<body style="text-align: center; font-family: sans-serif;">
+
     <form id="search-form">
-        <input type="text" id="study-id" placeholder="Enter Lichess Study ID">
+        <input type="text" id="study-id" placeholder="Enter Lichess Study ID" style="display: block; text-align: center; display: inline-block; align-content: center;">
         <button type="submit">Search</button>
     </form>
-  <form id="selection-form">
+  <form id="selection-form" style="display: inline-block;">
   </form>
     <div id="python" style="white-space: pre;">
     </div>
@@ -18,3 +19,9 @@
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
+<style>
+    h1 {
+
+    }
+</style>
+

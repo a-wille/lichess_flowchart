@@ -10,12 +10,13 @@ $(document).ready(function () {
                 data: JSON.stringify({ studyId: studyId }),
                 success: function (data) {
                     const chapters = data.chapters;
-                    let chapterListHTML = "<h2>Select the chapters to build the tree on. </h2><ul style='list-style: none'>";
+                    let chapterListHTML = "<h3>Select chapters for tree creation. </h3><ul style='list-style: none;'>";
                     for (const chapter of chapters) {
-                        chapterListHTML += `<li><input type="checkbox" value=${chapter.id}>${chapter.name}</li>`;
+                        chapterListHTML += `<li style="text-align: left;"><input type="checkbox" value=${chapter.id}>${chapter.name}</li>`;
                     }
                     chapterListHTML += "</ul><input type=\"submit\" value=\"Submit\">";
                     $("#selection-form").html(chapterListHTML);
+                    document.getElementById("python").innerText = " ";
                 },
                 error: function (xhr, status, error) {
                     alert("Error fetching study data: " + error);
@@ -42,8 +43,13 @@ $(document).ready(function () {
                 contentType: "application/json",
                 data: JSON.stringify({ studyId: studyId, chapters: selectedItems}),
                 success: function (data) {
-                    document.getElementById("python").innerText = data['tree']
-                    console.log(data)
+                    for (d in data['trees']) {
+                        name = data['trees'][d]
+                        ntext = name.replace(/_/g, ' ')
+                        img_src = '/static/' + name + '.png'
+                        document.getElementById("python").innerHTML += "<h2>" + ntext + "</h2><img src=" + img_src + "><br>"
+
+                    }
                 },
                 error: function (xhr, status, error) {
                     alert("Error fetching study data: " + error);
@@ -52,3 +58,4 @@ $(document).ready(function () {
         }
     });
 });
+
