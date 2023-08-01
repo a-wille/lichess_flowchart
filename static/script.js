@@ -34,9 +34,10 @@ $(document).ready(function () {
         });
 
         // You can process the selectedItems array here or send it to the server via a POST request.
-        console.log('Selected Items:', selectedItems);
         const studyId = $("#study-id").val().trim();
         if (studyId !== "") {
+            alert("Please be patient, loading results may take a minute!")
+            document.getElementById("python").innerHTML = "";
             $.ajax({
                 url: "/create_flowchart",
                 type: "POST",
@@ -47,7 +48,7 @@ $(document).ready(function () {
                         name = data['trees'][d]
                         ntext = name.replace(/_/g, ' ')
                         img_src = '/static/' + name + '.png'
-                        document.getElementById("python").innerHTML += "<h2>" + ntext + "</h2><img src=" + img_src + "><br>"
+                        document.getElementById("python").innerHTML += "<h2 >" + ntext + "</h2><img src=" + img_src + " style='max-width: 100%; height: auto;'><br>"
 
                     }
                 },

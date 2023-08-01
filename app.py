@@ -62,7 +62,8 @@ def create_flowchart():
                 tree = simple_parse_chapter(chapter, Tree())
                 x = x.replace(' ', '_')
                 tree.to_graphviz("{}.dot".format(x))
-                subprocess.call(["dot", "-Tpng", "{}.dot".format(x), "-o", "static/{}.png".format(x)])
+
+                subprocess.call(["dot", "-Tpng", "{}.dot".format(x), "-o", "lichess_flowchart/static/{}.png".format(x)])
                 subprocess.call(["rm", "{}.dot".format(x)])
                 return_data.append(x)
             else:
@@ -176,7 +177,6 @@ def simple_parse_chapter(chapter, tree):
 
         # remove first item and then move on
         moves = moves.replace(first_item, '', 1).strip()
-        tree.show()
     return tree
 
 
