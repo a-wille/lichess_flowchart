@@ -10,7 +10,7 @@ app = Flask(__name__)
 # Replace this with your Lichess API access token
 API_TOKEN = "lip_w4NL6oOWLdgb4mJEvuy6"
 
-#returns home page please don't judge me for lacking design principles
+#returns home page please don't judge me for my lack of style i just wanted this to work
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -20,7 +20,7 @@ def index():
 def get_study_chapters():
     # apparently lichess has some wierd formatting issue where we can't garauntee every chapter in a study has a unique ID
     # this presents a unique and frustrating challenge for accessing various chapter data.
-    # so fuck it. Guess we aren't using the API.
+    # so eff it. Guess we aren't using the API for pulling chapter names and ids.
     data = request.get_json()
     study_id = data.get("studyId")
 
@@ -52,9 +52,7 @@ def create_flowchart():
         try:
             response = requests.get(url, headers=headers)
             if response.status_code == 200:
-                data = response.content.decode()
-
-                # parse down to just move content in ile
+                # parse down to just chess move content in file
                 chapter = re.findall(r'\n\n([\S\s]*?)\*', response.content.decode())[0]
 
                 # parse chapter content
@@ -72,7 +70,7 @@ def create_flowchart():
     return {'trees': return_data}
 
 def simple_parse_chapter(chapter, tree):
-    #remove annotations
+    #remove annotations which are kept between brackets.
     moves = re.sub(r'\{([^}]+)\}', '', chapter)
     move_counter = 1
     color = 'w'
@@ -80,8 +78,6 @@ def simple_parse_chapter(chapter, tree):
     black_parent = None
 
     while moves != '':
-        # god help me if there is ever a chapter
-        # that has a () before any other moves
         create_node = True
         while moves.startswith('('):
             #search for full content in open parentheses
@@ -99,7 +95,7 @@ def simple_parse_chapter(chapter, tree):
             moves = moves.replace(paren_content, '', 1).strip()
             subtree = simple_parse_chapter(paren_content[1:-1], Tree())
 
-            # if parent is null (this means the openings are likely black and don't have a single root node,
+            # if parent is null this means the openings are likely black and don't have a single root node,
             # then create ? node just to keep all the black openings together and set that as the root/parent
             if not parent:
                 if "?" not in tree.nodes:
@@ -111,21 +107,25 @@ def simple_parse_chapter(chapter, tree):
                 else:
                     parent = "?"
 
-            # here we try and bring the subtree into the original tree, and we preventatively handle node errors
+            # here we try and bring the subtree into the original tree, and we preventatively handle duplicate node errors
             # (which we don't care about here since there are many duplicate chess moves even in different lines)
+            # basically, the treelib package wants each node to have a unique identifer. So to do this, we simply
+            # add periods to the identifier of a node so that we can keep the node move information, while maintaining a unique
+            # identification id for the node (this is important because we don't want certain subtrees to get put
+            # beneath the incorrect node.
             tree_keys = list(tree.nodes.keys())
-            # remove duplicate . scenarios because those will be handled all at once
+            # remove duplicate . scenarios in a simplified list because those will be handled in a single iteration
             sub_keys_simplified = list(set(map(lambda s: s.replace(".", ""), list(subtree.nodes.keys()))))
             sub_keys = list(subtree.nodes.keys())
 
             for item in sub_keys_simplified:
                 if item in tree_keys:
-                    original = item
 
                     # sort items with the same move from most . to least .
-                    sub_duplicates = sorted(list(filter(lambda x: original in x, sub_keys)), key=len, reverse=True)
+                    sub_duplicates = sorted(list(filter(lambda x: item in x, sub_keys)), key=len, reverse=True)
+
                     #give us the item with the most .
-                    tree_max = list(filter(lambda x: original in x, tree_keys))
+                    tree_max = list(filter(lambda x: item in x, tree_keys))
                     dot_count = 1
                     for m in tree_max:
                         if m.count('.')+1 > dot_count:
