@@ -10,10 +10,12 @@ app = Flask(__name__)
 # Replace this with your Lichess API access token
 API_TOKEN = "lip_w4NL6oOWLdgb4mJEvuy6"
 
+#returns home page please don't judge me for lacking design principles
 @app.route("/")
 def index():
     return render_template("index.html")
 
+#returns a list of all the chapters in a particular study.
 @app.route("/get_study_chapters", methods=["POST"])
 def get_study_chapters():
     # apparently lichess has some wierd formatting issue where we can't garauntee every chapter in a study has a unique ID
@@ -35,7 +37,7 @@ def get_study_chapters():
             chapters = json.loads(re.findall(r'\"chapters\":(\[.*?\])', study_data)[0])
             return jsonify({"chapters": chapters})
         else:
-            return jsonify({"error": "Study not found or API request failed"}), 404
+            return jsonify({"error": "Study not found. Make sure you have entered a valid and publicly available lichess study ID."}), 404
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 500
 

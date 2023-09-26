@@ -21,7 +21,7 @@ $(document).ready(function () {
                     document.getElementById("python").innerText = " ";
                 },
                 error: function (xhr, status, error) {
-                    alert("Error fetching study data: " + error);
+                    alert("Error: " + xhr.responseJSON['error']);
                 },
             });
         }
@@ -55,7 +55,7 @@ $(document).ready(function () {
                     }
                 },
                 error: function (xhr, status, error) {
-                    alert("Error fetching study data: " + error);
+                    alert("Error fetching study data: " + xhr.responseJSON['error']);
                 },
             });
         }
