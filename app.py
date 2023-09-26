@@ -3,6 +3,7 @@ import re
 from flask import Flask, render_template, request, jsonify
 from treelib import Tree
 import subprocess
+import json
 
 app = Flask(__name__)
 
@@ -15,30 +16,24 @@ def index():
 
 @app.route("/get_study_chapters", methods=["POST"])
 def get_study_chapters():
+    # apparently lichess has some wierd formatting issue where we can't garauntee every chapter in a study has a unique ID
+    # this presents a unique and frustrating challenge for accessing various chapter data.
+    # so fuck it. Guess we aren't using the API.
     data = request.get_json()
     study_id = data.get("studyId")
 
     if not study_id:
         return jsonify({"error": "Invalid study ID"}), 400
 
-    url = f"https://lichess.org/api/study/{study_id}.pgn"
+    url = f"https://lichess.org/study/{study_id}"
     headers = {"Authorization": f"Bearer {API_TOKEN}"}
     data = []
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             study_data = response.content.decode()
-            chapters = re.findall(r'\[Event ".*?: (.+?)"\]', study_data)
-            for chapter in chapters:
-                id = re.findall(r'{}"\]\n\[Site "https://lichess.org/study/(.+?)/(.+?)"'.format(chapter, re.escape(study_id)), study_data)
-                if len(id) != 1:
-                    return jsonify({'error': 'study or chapter not found'})
-                study = id[0][0]
-                cid = id[0][1]
-                id = '{}_{}'.format(study, cid)
-                data.append({'name': '{} [{}]'.format(chapter, id), 'id': id})
-
-            return jsonify({"chapters": data})
+            chapters = json.loads(re.findall(r'\"chapters\":(\[.*?\])', study_data)[0])
+            return jsonify({"chapters": chapters})
         else:
             return jsonify({"error": "Study not found or API request failed"}), 404
     except requests.exceptions.RequestException as e:
@@ -46,19 +41,16 @@ def get_study_chapters():
 
 @app.route("/create_flowchart", methods=["POST"])
 def create_flowchart():
-    data = request.get_json()
+    r_data = request.get_json()
     headers = {"Authorization": f"Bearer {API_TOKEN}"}
     return_data = []
-    for chapter in data['chapters']:
-        study_id = chapter.split('_')[0]
-        chapter_id = chapter.split('_')[1]
-        url = f"https://lichess.org/api/study/{study_id}/{chapter_id}.pgn"
+    for chapter in r_data['chapters']:
+        url = f"https://lichess.org/api/study/{r_data['studyId']}/{chapter['id']}.pgn"
+        name = chapter['name']
         try:
             response = requests.get(url, headers=headers)
             if response.status_code == 200:
                 data = response.content.decode()
-                # find chapter name
-                chapter_name = re.findall(r'\[Event ".*?: (.+?)"\]', data)[0]
 
                 # parse down to just move content in ile
                 chapter = re.findall(r'\n\n([\S\s]*?)\*', response.content.decode())[0]
@@ -66,14 +58,11 @@ def create_flowchart():
                 # parse chapter content
                 tree = simple_parse_chapter(chapter, Tree())
 
-                # remove spaces in file name (to make it easier to load images statically into frontend,
-                # we can't have spaces in the saved image file names)
-                file_name = chapter_name.replace(' ', '_')
-                tree.to_graphviz("{}.dot".format(file_name))
+                tree.to_graphviz("{}.dot".format(name))
 
-                subprocess.call(["dot", "-Tpng", "{}.dot".format(file_name), "-o", "lichess_flowchart/static/{}.png".format(x)])
-                subprocess.call(["rm", "{}.dot".format(file_name)])
-                return_data.append(file_name)
+                subprocess.call(["dot", "-Tpng", "{}.dot".format(name), "-o", "lichess_flowchart/static/{}.png".format(name)])
+                subprocess.call(["rm", "{}.dot".format(name)])
+                return_data.append(name)
             else:
                 return jsonify({"error": str("Study not found, may be private or API request failed")}), 404
         except requests.exceptions.RequestException as e:
@@ -81,6 +70,7 @@ def create_flowchart():
     return {'trees': return_data}
 
 def simple_parse_chapter(chapter, tree):
+    #remove annotations
     moves = re.sub(r'\{([^}]+)\}', '', chapter)
     move_counter = 1
     color = 'w'
@@ -119,28 +109,33 @@ def simple_parse_chapter(chapter, tree):
                 else:
                     parent = "?"
 
-            # here we try and bring the subtree into the original tree, and we handle duplicate node errors
+            # here we try and bring the subtree into the original tree, and we preventatively handle node errors
             # (which we don't care about here since there are many duplicate chess moves even in different lines)
-            try:
-                tree.paste(parent, subtree)
-            except ValueError as e:
-                pc = 1
-                inserted = False
-                for item in e.args[0]:
-                    subtree.update_node(item, identifier=item + '.')
+            tree_keys = list(tree.nodes.keys())
+            # remove duplicate . scenarios because those will be handled all at once
+            sub_keys_simplified = list(set(map(lambda s: s.replace(".", ""), list(subtree.nodes.keys()))))
+            sub_keys = list(subtree.nodes.keys())
 
-                # while loop will just keep trying to bring the trees together by adding periods to the subtree items
-                # since we are done touching those nodes (and their id doesn't matter anymore) until the paste function works
-                while not inserted:
-                    try:
-                        tree.paste(parent, subtree)
-                        inserted = True
-                    except ValueError as e:
-                        for item in e.args[0]:
-                            subtree.update_node(item, identifier=item + '.' * pc)
-                        pc += 1
+            for item in sub_keys_simplified:
+                if item in tree_keys:
+                    original = item
 
-        # if no more moves, return tree
+                    # sort items with the same move from most . to least .
+                    sub_duplicates = sorted(list(filter(lambda x: original in x, sub_keys)), key=len, reverse=True)
+                    #give us the item with the most .
+                    tree_max = list(filter(lambda x: original in x, tree_keys))
+                    dot_count = 1
+                    for m in tree_max:
+                        if m.count('.')+1 > dot_count:
+                            dot_count = m.count('.')+1
+
+                    for s in sub_duplicates:
+                        og = s
+                        s += '.' * dot_count
+                        subtree.update_node(og, identifier=s)
+            tree.paste(parent, subtree)
+
+
         if moves == '':
             return tree
 
@@ -148,8 +143,7 @@ def simple_parse_chapter(chapter, tree):
         first_item = re.search(r'([^\s]+)', moves).group()
         # if #... then we know it is a black move next, so we update the number and color accordingly
         if re.search(r'[0-9]*\.\.\.', first_item) and re.search(r'[0-9]*\.\.\.', first_item).group() == first_item:
-            int(re.search(r'[0-9]*', first_item).group())
-            print("move counter: " + str(move_counter))
+            move_counter = int(re.search(r'[0-9]*', first_item).group())
             color = 'b'
 
         # if #. then we know it is a white move next, so we update the number and color accordingly
@@ -196,5 +190,5 @@ def simple_parse_chapter(chapter, tree):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
 
