@@ -5,10 +5,12 @@ from treelib import Tree
 import subprocess
 import json
 
+#replace this with your own token.py file that contains your lichess API token
+from token import API_TOKEN
+
 app = Flask(__name__)
 
-# Replace this with your Lichess API access token
-API_TOKEN = "lip_w4NL6oOWLdgb4mJEvuy6"
+
 
 #returns home page please don't judge me for my lack of style i just wanted this to work
 @app.route("/")
