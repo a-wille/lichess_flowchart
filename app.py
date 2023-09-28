@@ -59,6 +59,20 @@ def create_flowchart():
                 tree = simple_parse_chapter(chapter, Tree())
 
                 tree.to_graphviz("{}.dot".format(name))
+                nice_name = name.replace('_', ' ')
+                dot_file_path = "{}.dot".format(name)
+
+                # Read the original DOT content
+                with open(dot_file_path, 'r') as original_dot_file:
+                    original_dot_content = original_dot_file.read()
+
+                # add title to the DOT content
+                split_content = original_dot_content.split('{\n\t')
+                new_content = split_content[0] + '{\n\t' + 'label     = "' + nice_name + '"\n\t' + 'labelloc  =  t\n\tfontsize  = 30' + split_content[1]
+
+                # Save the modified DOT content back to the file
+                with open(dot_file_path, 'w') as modified_dot_file:
+                    modified_dot_file.write(new_content)
 
                 subprocess.call(["dot", "-Tpng", "{}.dot".format(name), "-o", "lichess_flowchart/static/{}.png".format(name)])
                 subprocess.call(["rm", "{}.dot".format(name)])

@@ -50,7 +50,7 @@ $(document).ready(function () {
                         name = data['trees'][d]
                         ntext = name.replace(/_/g, ' ')
                         img_src = '/static/' + name + '.png'
-                        document.getElementById("python").innerHTML += "<h2 >" + ntext + "</h2><img src=" + img_src + " style='max-width: 100%; height: auto;'><br>"
+                        document.getElementById("python").innerHTML += "<img src=" + img_src + " style='max-width: 100%; height: auto; padding-bottom: 50px'><br>"
 
                     }
                 },
